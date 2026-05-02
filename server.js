@@ -1,176 +1,137 @@
 const express = require("express");
+const http = require("http");
 const cors = require("cors");
-const path = require("path");
+const helmet = require("helmet");
+const compression = require("compression");
+const rateLimit = require("express-rate-limit");
+const cookieParser = require("cookie-parser");
+const dotenv = require("dotenv");
+const { Server } = require("socket.io");
+const { ApolloServer } = require("@apollo/server");
+const { expressMiddleware } = require("@as-integrations/express5");
+const connectDB = require("./config/db");
+const authRoutes = require("./routes/authRoutes");
+const userRoutes = require("./routes/userRoutes");
+const productRoutes = require("./routes/productRoutes");
+const typeDefs = require("./graphql/schema");
+const resolvers = require("./graphql/resolvers");
+const { getUserFromRequest } = require("./services/auth");
+const { registerSocketHandlers } = require("./realtime/socketServer");
+
+dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const isProduction = process.env.NODE_ENV === "production";
+const httpServer = http.createServer(app);
+const io = new Server(httpServer, {
+  cors: {
+    origin: process.env.CLIENT_ORIGIN || "http://localhost:5173",
+    credentials: true,
+  },
+});
 
-app.use(cors());
-app.use(express.json());
+registerSocketHandlers(io);
 
-// In-memory store for demo purposes
-let users = [
-  { id: 1, name: "Alice Johnson", email: "alice@example.com" },
-  { id: 2, name: "Bob Smith", email: "bob@example.com" },
-];
-let nextId = 3;
+app.set("trust proxy", 1);
 
-const isValidEmail = (email) =>
-  typeof email === "string" && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+app.use(
+  cors({
+    origin: process.env.CLIENT_ORIGIN || "http://localhost:5173",
+    credentials: true,
+  }),
+);
+app.use(
+  helmet({
+    contentSecurityPolicy: false,
+  }),
+);
+app.use(compression());
+app.use(express.json({ limit: "1mb" }));
+app.use(cookieParser());
 
-function validateUserPayload(payload, partial = false) {
-  const errors = [];
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 300,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: "Too many requests. Try again shortly." },
+});
 
-  if (!partial || payload.name !== undefined) {
-    if (typeof payload.name !== "string" || payload.name.trim().length < 2) {
-      errors.push("name must be a string with at least 2 characters");
-    }
-  }
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 40,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: "Too many auth attempts. Try again later." },
+});
 
-  if (!partial || payload.email !== undefined) {
-    if (!isValidEmail(payload.email)) {
-      errors.push("email must be a valid email address");
-    }
-  }
-
-  return errors;
-}
+app.use("/api", apiLimiter);
+app.use("/api/auth", authLimiter);
 
 app.get("/api/health", (req, res) => {
-  res.status(200).json({ status: "ok" });
+  res
+    .status(200)
+    .json({ status: "ok", env: isProduction ? "production" : "development" });
 });
 
-// READ all
-app.get("/api/users", (req, res) => {
-  res.status(200).json(users);
-});
+app.use("/api/auth", authRoutes);
+app.use("/api/users", userRoutes);
+app.use("/api/products", productRoutes);
 
-// READ one
-app.get("/api/users/:id", (req, res, next) => {
-  try {
-    const id = Number(req.params.id);
-    if (Number.isNaN(id)) {
-      return res.status(400).json({ message: "Invalid user id" });
-    }
+async function mountGraphQL() {
+  const apolloServer = new ApolloServer({
+    typeDefs,
+    resolvers,
+  });
 
-    const user = users.find((u) => u.id === id);
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
+  await apolloServer.start();
 
-    return res.status(200).json(user);
-  } catch (error) {
-    return next(error);
-  }
-});
+  app.use(
+    "/graphql",
+    expressMiddleware(apolloServer, {
+      context: async ({ req, res }) => ({
+        req,
+        res,
+        io,
+        user: await getUserFromRequest(req),
+      }),
+    }),
+  );
+}
 
-// CREATE
-app.post("/api/users", (req, res, next) => {
-  try {
-    const errors = validateUserPayload(req.body);
-    if (errors.length) {
-      return res.status(400).json({ message: "Validation failed", errors });
-    }
-
-    const emailExists = users.some(
-      (u) => u.email.toLowerCase() === req.body.email.toLowerCase(),
-    );
-    if (emailExists) {
-      return res.status(409).json({ message: "Email already exists" });
-    }
-
-    const newUser = {
-      id: nextId++,
-      name: req.body.name.trim(),
-      email: req.body.email.trim().toLowerCase(),
-    };
-
-    users.push(newUser);
-    return res.status(201).json(newUser);
-  } catch (error) {
-    return next(error);
-  }
-});
-
-// UPDATE
-app.put("/api/users/:id", (req, res, next) => {
-  try {
-    const id = Number(req.params.id);
-    if (Number.isNaN(id)) {
-      return res.status(400).json({ message: "Invalid user id" });
-    }
-
-    const index = users.findIndex((u) => u.id === id);
-    if (index === -1) {
-      return res.status(404).json({ message: "User not found" });
-    }
-
-    const errors = validateUserPayload(req.body);
-    if (errors.length) {
-      return res.status(400).json({ message: "Validation failed", errors });
-    }
-
-    const emailExists = users.some(
-      (u) =>
-        u.id !== id && u.email.toLowerCase() === req.body.email.toLowerCase(),
-    );
-    if (emailExists) {
-      return res.status(409).json({ message: "Email already exists" });
-    }
-
-    users[index] = {
-      id,
-      name: req.body.name.trim(),
-      email: req.body.email.trim().toLowerCase(),
-    };
-
-    return res.status(200).json(users[index]);
-  } catch (error) {
-    return next(error);
-  }
-});
-
-// DELETE
-app.delete("/api/users/:id", (req, res, next) => {
-  try {
-    const id = Number(req.params.id);
-    if (Number.isNaN(id)) {
-      return res.status(400).json({ message: "Invalid user id" });
-    }
-
-    const initialLength = users.length;
-    users = users.filter((u) => u.id !== id);
-
-    if (users.length === initialLength) {
-      return res.status(404).json({ message: "User not found" });
-    }
-
-    return res.status(200).json({ message: "User deleted successfully" });
-  } catch (error) {
-    return next(error);
-  }
-});
-
-// Serve frontend files
-app.use(express.static(path.join(__dirname, "public")));
-
-app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "index.html"));
-});
-
-// API 404 handler
 app.use("/api", (req, res) => {
   res.status(404).json({ message: "API route not found" });
 });
 
-// Global error handler
 app.use((err, req, res, next) => {
+  const isValidationError = err.name === "ValidationError";
+  const duplicateKey = err.code === 11000;
+
+  if (isValidationError) {
+    const errors = Object.values(err.errors).map((item) => item.message);
+    return res.status(400).json({ message: "Validation failed", errors });
+  }
+
+  if (duplicateKey) {
+    return res.status(409).json({ message: "Duplicate key conflict" });
+  }
+
   console.error(err);
-  res.status(500).json({
-    message: "Internal server error",
-  });
+  return res.status(500).json({ message: "Internal server error" });
 });
 
-app.listen(PORT, () => {
-  console.log(`Server running at http://localhost:${PORT}`);
-});
+async function start() {
+  try {
+    await connectDB();
+    await mountGraphQL();
+    httpServer.listen(PORT, () => {
+      console.log(`Server running at http://localhost:${PORT}`);
+    });
+  } catch (error) {
+    console.error("Startup failed:", error.message);
+    process.exit(1);
+  }
+}
+
+start();

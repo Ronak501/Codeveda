@@ -256,3 +256,218 @@ Features implemented:
 - Delete user
 - Error and success messages
 - Responsive layout for desktop/mobile
+
+## 12) Advanced Full-Stack Tasks (React + Auth + MongoDB)
+
+This repository now includes:
+- React frontend in `client/`
+- Express backend with JWT authentication
+- MongoDB integration with Mongoose models and indexes
+
+### Backend auth and authorization
+
+Implemented endpoints:
+- `POST /api/auth/signup`
+- `POST /api/auth/login`
+- `POST /api/auth/logout`
+- `GET /api/auth/me`
+
+Token strategy:
+- JWT token is set in an HTTP-only cookie named `token`
+- API also returns token in response body for optional client usage
+
+Role-based protection:
+- `GET /api/users` -> admin only
+- `PUT /api/users/:id/role` -> admin only
+- `DELETE /api/products/:id` -> admin only
+- Product update -> owner or admin
+
+### MongoDB models and validation
+
+Models:
+- `models/User.js`
+- `models/Product.js`
+
+Validation examples:
+- Email format validation
+- Password minimum length
+- Product price/stock non-negative
+- Name/category length constraints
+
+Indexes:
+- `User.email` unique index
+- `User.role + createdAt` index
+- `Product.category + price` index
+- `Product.name` text index (with description)
+
+### Configure environment
+
+Create `.env` from `.env.example` and set real values.
+
+Required keys:
+- `PORT`
+- `MONGO_URI`
+- `JWT_SECRET`
+- `JWT_EXPIRES_IN`
+- `CLIENT_ORIGIN`
+
+### Run backend
+
+```powershell
+npm install
+npm run dev
+```
+
+### Run React frontend
+
+```powershell
+npm --prefix client install
+npm run client:dev
+```
+
+Frontend URL:
+- `http://localhost:5173`
+
+Backend URL:
+- `http://localhost:3000`
+
+### Product API (secured)
+
+- `GET /api/products`
+- `GET /api/products/:id`
+- `POST /api/products`
+- `PUT /api/products/:id`
+- `DELETE /api/products/:id` (admin)
+
+Sample product payload:
+
+```json
+{
+	"name": "Mechanical Keyboard",
+	"description": "Compact 75% layout",
+	"category": "Electronics",
+	"price": 149.99,
+	"stock": 20
+}
+```
+
+## 13) Full-Stack Application Deliverable (MERN)
+
+This repo now delivers a complete MERN-style app with:
+- React frontend (`client/`)
+- Express backend (`server.js` + `routes/`)
+- MongoDB database (`models/` + Mongoose)
+- JWT authentication + role-based authorization
+- Socket.io realtime chat and notifications
+- Apollo GraphQL API with auth-aware queries and mutations
+- Container deployment support (`docker-compose.yml`)
+
+### Authentication and role access
+
+- Signup/Login with bcrypt password hashing
+- JWT issued and persisted in HTTP-only cookie
+- Role checks:
+	- Admin-only user listing and role updates
+	- Admin-only product deletion
+	- Product update restricted to owner/admin
+
+### Performance optimization implemented
+
+- Mongoose indexes on user/product models
+- Paginated product listing (`page`, `limit`)
+- Text-search product listing (`search`)
+- API compression via `compression`
+- Security headers via `helmet`
+- API and auth rate limiting via `express-rate-limit`
+- Lean queries and capped page sizes for reduced response overhead
+
+### Realtime communication
+
+Socket.io is available at the same backend origin and is authenticated with the JWT cookie. It supports:
+- Private user-to-user chat messages
+- User-specific notifications
+- Live notification updates when products or messages are created
+
+Client panels:
+- `client/src/features/RealtimePanel.jsx`
+
+### GraphQL API
+
+GraphQL is mounted at `/graphql` and uses the same JWT auth context as REST.
+
+Available GraphQL operations include:
+- `me`
+- `products(page, limit, search, category)`
+- `product(id)`
+- `notifications(limit)`
+- `conversations(withUserId)`
+- `signup`
+- `login`
+- `createProduct`
+- `updateProduct`
+- `deleteProduct`
+- `markNotificationRead`
+- `sendMessage`
+
+Client panel:
+- `client/src/features/GraphQLPanel.jsx`
+
+### Updated product list API (optimized)
+
+`GET /api/products?page=1&limit=8&search=keyboard`
+
+Response shape:
+
+```json
+{
+	"items": [],
+	"pagination": {
+		"page": 1,
+		"limit": 8,
+		"total": 0,
+		"totalPages": 1
+	}
+}
+```
+
+### Local development run
+
+Backend:
+
+```powershell
+npm install
+npm run dev
+```
+
+Frontend:
+
+```powershell
+npm --prefix client install
+npm run client:dev
+```
+
+### Deploy both frontend and backend with Docker
+
+Build and run all services (MongoDB + backend + frontend):
+
+```powershell
+npm run docker:up
+```
+
+Stop services:
+
+```powershell
+npm run docker:down
+```
+
+Service URLs:
+- Frontend: `http://localhost:8080`
+- Backend API: `http://localhost:3000/api`
+- MongoDB: `mongodb://localhost:27017`
+
+Files added for deployment:
+- `Dockerfile` (backend)
+- `client/Dockerfile` (frontend)
+- `client/nginx.conf` (SPA + API proxy)
+- `docker-compose.yml` (full stack orchestration)
+- `.dockerignore`
