@@ -39,10 +39,22 @@ C:\Users\<YOUR_USER>\AppData\Local\Programs\Microsoft VS Code\bin
 
 ## 3) Install a database (choose one)
 
+Detected on this machine:
+- `winget`: not available in current terminal
+- `choco`: available
+- `scoop`: available
+
 ### Option A: MongoDB (NoSQL)
-Install using winget:
+Install (choose one package manager):
 
 ```powershell
+# Chocolatey
+choco install mongodb -y
+
+# Scoop
+scoop install mongodb
+
+# Winget (if available in your environment)
 winget install --id MongoDB.Server --source winget
 ```
 
@@ -57,6 +69,10 @@ mongosh --version
 Install:
 
 ```powershell
+# Chocolatey
+choco install postgresql -y
+
+# Winget (if available)
 winget install --id PostgreSQL.PostgreSQL --source winget
 ```
 
@@ -70,6 +86,10 @@ psql --version
 Install:
 
 ```powershell
+# Chocolatey
+choco install mysql -y
+
+# Winget (if available)
 winget install --id Oracle.MySQL --source winget
 ```
 
