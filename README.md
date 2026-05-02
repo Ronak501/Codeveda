@@ -178,3 +178,81 @@ Set-Location ..
 git add .
 git commit -m "chore: scaffold frontend and backend"
 ```
+
+## 8) Run the full project (Task 2 + Task 3)
+
+Install dependencies (already done in this workspace):
+
+```powershell
+npm install
+```
+
+Start server:
+
+```powershell
+npm start
+```
+
+Open in browser:
+
+```text
+http://localhost:3000
+```
+
+## 9) REST API endpoints (Users resource)
+
+Base URL:
+
+```text
+http://localhost:3000/api
+```
+
+Endpoints:
+- `GET /health` -> health check
+- `GET /users` -> get all users
+- `GET /users/:id` -> get user by id
+- `POST /users` -> create user
+- `PUT /users/:id` -> update user
+- `DELETE /users/:id` -> delete user
+
+Sample JSON body for create/update:
+
+```json
+{
+	"name": "Jane Doe",
+	"email": "jane@example.com"
+}
+```
+
+Status codes used:
+- `200` success for read/update/delete
+- `201` created
+- `400` invalid payload or ID
+- `404` resource/route not found
+- `409` duplicate email
+- `500` internal server error
+
+## 10) Test in Postman or Thunder Client
+
+1. Create request: `POST http://localhost:3000/api/users`
+2. Add JSON body and send.
+3. Copy returned `id`.
+4. Call `GET http://localhost:3000/api/users/{id}`.
+5. Call `PUT http://localhost:3000/api/users/{id}` with updated body.
+6. Call `DELETE http://localhost:3000/api/users/{id}`.
+7. Test error case: `GET http://localhost:3000/api/users/99999`.
+
+## 11) Frontend details
+
+Frontend files:
+- `public/index.html` -> page layout
+- `public/styles.css` -> responsive styling
+- `public/app.js` -> Fetch API calls to backend and dynamic rendering
+
+Features implemented:
+- List users from API
+- Create user
+- Edit user
+- Delete user
+- Error and success messages
+- Responsive layout for desktop/mobile

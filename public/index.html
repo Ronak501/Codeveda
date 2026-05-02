@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Users CRUD Dashboard</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="background-shape"></div>
+    <main class="container">
+      <header class="hero">
+        <h1>Users CRUD Dashboard</h1>
+        <p>Simple frontend with vanilla JavaScript + Express REST API.</p>
+      </header>
+
+      <section class="card">
+        <h2 id="form-title">Add User</h2>
+        <form id="user-form" class="form-grid">
+          <input type="hidden" id="user-id" />
+
+          <label for="name">Name</label>
+          <input
+            id="name"
+            name="name"
+            type="text"
+            placeholder="Jane Doe"
+            required
+          />
+
+          <label for="email">Email</label>
+          <input
+            id="email"
+            name="email"
+            type="email"
+            placeholder="jane@example.com"
+            required
+          />
+
+          <div class="actions">
+            <button type="submit" id="submit-btn">Create User</button>
+            <button type="button" id="cancel-btn" class="secondary hidden">
+              Cancel Edit
+            </button>
+          </div>
+        </form>
+        <p id="message" class="message" aria-live="polite"></p>
+      </section>
+
+      <section class="card">
+        <div class="list-header">
+          <h2>Users</h2>
+          <button id="refresh-btn" class="secondary">Refresh</button>
+        </div>
+        <div id="users-container" class="users"></div>
+      </section>
+    </main>
+
+    <script src="app.js"></script>
+  </body>
+</html>
