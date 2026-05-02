@@ -19,7 +19,7 @@ services:
     environment:
       PORT: 3000
       NODE_ENV: production
-      MONGO_URI: mongodb://mongo:27017/codeveda
+      MONGO_URI: mongodb+srv://ronaktalaviya51_db_user:DH90pMppNMKi8kV9@codeveda.9xhnenm.mongodb.net/
       JWT_SECRET: change_this_in_real_deployment
       JWT_EXPIRES_IN: 1d
       CLIENT_ORIGIN: http://localhost:8080
